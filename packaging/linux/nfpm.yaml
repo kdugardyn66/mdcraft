@@ -1,0 +1,23 @@
+# .deb / .rpm (nfpm). package.sh substitutes ${STAGE} and exports VERSION and NFPM_ARCH.
+name: mdcraft
+arch: ${NFPM_ARCH}
+platform: linux
+version: ${VERSION}
+version_schema: semver
+section: editors
+maintainer: Kris Dugardyn <kris.dugardyn@gmail.com>
+homepage: https://github.com/kdugardyn/mdcraft
+license: MIT OR Apache-2.0
+description: |-
+  Markdown word processor with a ribbon, live preview, slides and templates.
+  Includes mdcraft-cli for rendering, exporting and creating documents from templates.
+overrides:
+  deb:
+    depends: [libwebkit2gtk-4.1-0, libgtk-3-0]
+    recommends: [ffmpeg, xdg-utils]
+  rpm:
+    depends: [webkit2gtk4.1, gtk3]
+contents:
+  - { src: "${STAGE}/usr/bin/mdcraft", dst: /usr/bin/mdcraft, file_info: { mode: 0755 } }
+  - { src: "${STAGE}/usr/bin/mdcraft-cli", dst: /usr/bin/mdcraft-cli, file_info: { mode: 0755 } }
+  - { src: "${STAGE}/usr/share/", dst: /usr/share/, type: tree }

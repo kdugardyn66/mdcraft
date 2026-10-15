@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.kdugardyn.mdcraft</id>
+  <name>mdcraft</name>
+  <summary>Markdown word processor with live preview, slides and templates</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT OR Apache-2.0</project_license>
+  <developer id="io.github.kdugardyn"><name>Kris Dugardyn</name></developer>
+  <description>
+    <p>mdcraft is a word processor for Markdown with a familiar ribbon: write plain text and see a
+    finished document or slide deck as you type. Diagrams, charts, equations, tables and media render
+    offline. Start from Word-style document templates (report, proposal, letter, memo, minutes, résumé,
+    specification, paper, newsletter) or PowerPoint-style decks, present full screen, print to PDF
+    and export web pages.</p>
+  </description>
+  <launchable type="desktop-id">io.github.kdugardyn.mdcraft.desktop</launchable>
+  <provides><binary>mdcraft</binary><binary>mdcraft-cli</binary></provides>
+  <categories><category>Office</category><category>WordProcessor</category></categories>
+  <content_rating type="oars-1.1"/>
+  <releases><release version="0.1.0" date="2026-10-14"/></releases>
+</component>

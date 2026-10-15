@@ -1,0 +1,37 @@
+[workspace]
+resolver = "2"
+members = ["crates/*", "apps/*"]
+default-members = ["crates/*", "apps/mdcraft", "apps/mdcraft-cli"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+rust-version = "1.85"
+repository = "https://github.com/kdugardyn/mdcraft"
+authors = ["Kris Dugardyn"]
+
+[workspace.dependencies]
+mdcraft-core = { path = "crates/mdcraft-core" }
+mdcraft-templates = { path = "crates/mdcraft-templates" }
+
+comrak = { version = "0.56", default-features = false, features = ["shortcodes", "attributes"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+flate2 = "1"
+ureq = { version = "2", features = ["native-certs"] }
+libc = "0.2"
+
+tao = "0.37"
+wry = "0.57"
+rfd = { version = "0.17", default-features = false, features = ["gtk3"] }
+muda = "0.21"
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 16
+strip = true

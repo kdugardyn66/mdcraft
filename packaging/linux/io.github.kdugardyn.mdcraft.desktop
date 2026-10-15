@@ -1,0 +1,23 @@
+[Desktop Entry]
+Type=Application
+Name=mdcraft
+GenericName=Markdown Word Processor
+Comment=Write Markdown, get Word-style documents and PowerPoint-style slides
+Exec=mdcraft %F
+TryExec=mdcraft
+Icon=io.github.kdugardyn.mdcraft
+Terminal=false
+StartupNotify=true
+StartupWMClass=mdcraft
+Categories=Office;WordProcessor;Presentation;
+Keywords=markdown;md;document;slides;presentation;report;letter;mermaid;
+MimeType=text/markdown;text/x-markdown;
+Actions=new-document;new-presentation;
+
+[Desktop Action new-document]
+Name=New document
+Exec=mdcraft --template blank
+
+[Desktop Action new-presentation]
+Name=New presentation
+Exec=mdcraft --template blank-deck

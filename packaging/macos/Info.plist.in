@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- packaging/macos/package.sh substitutes @VERSION@. -->
+<plist version="1.0">
+<dict>
+  <key>CFBundleDisplayName</key><string>mdcraft</string>
+  <key>CFBundleName</key><string>mdcraft</string>
+  <key>CFBundleExecutable</key><string>mdcraft</string>
+  <key>CFBundleIdentifier</key><string>io.github.kdugardyn.mdcraft</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleShortVersionString</key><string>@VERSION@</string>
+  <key>CFBundleVersion</key><string>@VERSION@</string>
+  <key>CFBundleIconFile</key><string>mdcraft</string>
+  <key>LSApplicationCategoryType</key><string>public.app-category.productivity</string>
+  <key>LSMinimumSystemVersion</key><string>11.0</string>
+  <key>NSHighResolutionCapable</key><true/>
+  <key>NSRequiresAquaSystemAppearance</key><false/>
+  <key>NSHumanReadableCopyright</key><string>© Kris Dugardyn and the mdcraft contributors. MIT OR Apache-2.0.</string>
+  <key>CFBundleDocumentTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleTypeName</key><string>Markdown document</string>
+      <key>CFBundleTypeRole</key><string>Editor</string>
+      <key>LSHandlerRank</key><string>Alternate</string>
+      <key>CFBundleTypeExtensions</key><array><string>md</string><string>markdown</string></array>
+      <key>LSItemContentTypes</key><array><string>net.daringfireball.markdown</string></array>
+    </dict>
+  </array>
+</dict>
+</plist>

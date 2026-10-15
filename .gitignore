@@ -1,0 +1,4 @@
+/target
+tools/editor-bundle/node_modules
+.DS_Store
+*.swp

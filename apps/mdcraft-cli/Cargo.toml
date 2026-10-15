@@ -1,0 +1,11 @@
+[package]
+name = "mdcraft-cli"
+description = "mdcraft on the command line: render, export, new documents from templates, serve in a browser"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+mdcraft-core.workspace = true
+serde_json.workspace = true
