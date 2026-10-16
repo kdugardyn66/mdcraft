@@ -7,7 +7,7 @@
   text, cursor, and every command by id. `--root`, `--automation-read-root` and
   `--automation-write-root` keep the agent inside the folders you choose. See `docs/mcp.md`.
 - The app is called MdCraft: `MdCraft.app` and `MdCraft-<version>-macos-universal.dmg` on macOS,
-  “MdCraft” in the Linux applications menu. Commands and packages stay lowercase
+  “MdCraft” in the Linux applications menu, the window title, the macOS menu bar and About. Commands and packages stay lowercase
   (`mdcraft`, `mdcraft-cli`).
 - Windows is no longer supported: macOS and Linux only. Removed the Windows packaging script,
   the Windows CI runner, the `.ico` icon and the Windows-only code paths; building for Windows

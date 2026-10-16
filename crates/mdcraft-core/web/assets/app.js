@@ -72,7 +72,7 @@
   MD.confirmDiscard = async () => {
     if (!doc.open || !doc.dirty) return true;
     const v = await MD.dialog({
-      title: 'mdcraft',
+      title: 'MdCraft',
       body: h('div', h('p.md-dlg-text', h('b', 'Do you want to save the changes to “' + doc.name + '”?')), h('p.md-hint', 'Your changes will be lost if you don’t save them.')),
       buttons: [{ label: 'Don’t Save', value: 'discard', left: true }, { label: 'Cancel', value: null }, { label: 'Save', value: 'save', primary: true }],
     });
@@ -229,8 +229,8 @@
 
   // ================================================================== title and status bar
   function updateTitle() {
-    const name = doc.open ? doc.name : 'mdcraft';
-    const t = doc.open ? (doc.dirty ? '• ' : '') + name + ' — mdcraft' : 'mdcraft';
+    const name = doc.open ? doc.name : 'MdCraft';
+    const t = doc.open ? (doc.dirty ? '• ' : '') + name + ' — MdCraft' : 'MdCraft';
     document.title = t;
     const dn = $('md-docname');
     dn.textContent = doc.open ? name.replace(/\.md$/, '') + (doc.saved ? (doc.dirty ? ' • Edited' : ' • Saved') : ' • Not saved') : '';
@@ -485,7 +485,7 @@
     css += '\n' + pageStyle.textContent + '\nbody{margin:0;background:#fff}.markdown-body{margin:0 auto}\n@media screen{.markdown-body:not(.ml-deck){max-width:860px;padding:48px 40px 80px}}';
     const title = MD.docTitle();
     const wm = !$('md-watermark').hidden ? '<div id="md-watermark">' + MD.esc($('md-watermark').textContent) + '</div>' : '';
-    return '<!doctype html>\n<html lang="en" data-theme="light">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<meta name="generator" content="mdcraft ' + MD.app.version + '">\n<title>' + MD.esc(title) + '</title>\n<style>\n' + css + '\n</style>\n</head>\n<body>\n' + wm + '<article class="' + content.className + '">\n' + clone.innerHTML + '\n</article>\n</body>\n</html>\n';
+    return '<!doctype html>\n<html lang="en" data-theme="light">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<meta name="generator" content="MdCraft ' + MD.app.version + '">\n<title>' + MD.esc(title) + '</title>\n<style>\n' + css + '\n</style>\n</head>\n<body>\n' + wm + '<article class="' + content.className + '">\n' + clone.innerHTML + '\n</article>\n</body>\n</html>\n';
   };
   async function saveText(name, text, ext) {
     if (MD.isNative()) {

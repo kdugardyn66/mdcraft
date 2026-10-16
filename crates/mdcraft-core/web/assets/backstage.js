@@ -195,7 +195,7 @@
       let rec = [];
       try { rec = await MD.api('/api/autosave/list'); } catch (e) { /* ignore */ }
       if (rec.length) {
-        root.append(h('div.md-bs-section-head', h('h2', 'Recovered documents')), h('p.md-hint', 'mdcraft closed before these were saved. Open one to keep working on it.'));
+        root.append(h('div.md-bs-section-head', h('h2', 'Recovered documents')), h('p.md-hint', 'MdCraft closed before these were saved. Open one to keep working on it.'));
         const tbl = h('div.md-recent-table');
         for (const r of rec) {
           const row = h('div.md-recent-row.md-recover', MD.icon('recover', 22), h('div.md-recent-name', h('b', r.name || 'Untitled'), h('small', (r.path || '') + ' · ' + r.chars + ' characters')), h('div.md-recent-date', MD.fmtDate(r.saved)),
@@ -364,14 +364,14 @@
     async about() {
       const ext = (url, label) => h('a', { href: url, onclick: (e) => { e.preventDefault(); MD.openExternal(url); } }, label || url);
       return h('div.md-bs-content.md-about',
-        h('div.md-about-head', h('span.md-about-logo', MD.icon('logo', 72)), h('div', h('h1', 'mdcraft'), h('p', 'Version ' + MD.app.version + ' · ' + MD.app.platform), h('p.md-hint', 'Write in Markdown, get Word-style documents and PowerPoint-style slides.'))),
+        h('div.md-about-head', h('span.md-about-logo', MD.icon('logo', 72)), h('div', h('h1', 'MdCraft'), h('p', 'Version ' + MD.app.version + ' · ' + MD.app.platform), h('p.md-hint', 'Write in Markdown, get Word-style documents and PowerPoint-style slides.'))),
         h('h2', 'Built from'),
         h('ul',
           h('li', h('b', 'WordCraft'), ' — the application template: workspace layout, the ribbon and File view, design tokens, conventions (MIT OR Apache-2.0, © ArtCraft Team and the WordCraft contributors). ', ext('https://github.com/storytold/wordcraft')),
           h('li', h('b', 'MarkDown Live'), ' — the Markdown renderer and live preview: diagrams, math, charts, CSV, code chunks, media, slides (MIT, © Kris Dugardyn).')),
         h('h2', 'Open-source components'),
         h('p.md-hint', 'comrak, tao, wry, CodeMirror, Mermaid, KaTeX, MathJax, highlight.js, Chart.js, Vega, Plotly, Viz.js (Graphviz), WaveDrom, flowchart.js, SmilesDrawer, Mol*, morphdom. Fonts: Inter, Source Sans 3, Source Serif 4, JetBrains Mono (SIL Open Font License). See THIRD_PARTY_NOTICES.md.'),
-        h('p.md-hint', 'mdcraft is independent and not affiliated with Microsoft. Word and PowerPoint are trademarks of Microsoft Corporation, named only to describe the kind of documents the templates resemble.'),
+        h('p.md-hint', 'MdCraft is independent and not affiliated with Microsoft. Word and PowerPoint are trademarks of Microsoft Corporation, named only to describe the kind of documents the templates resemble.'),
         h('div.md-bs-toolbar', h('button.md-btn', { onclick: () => MD.run('help.shortcuts') }, MD.icon('keyboard', 18), 'Keyboard shortcuts'), h('button.md-btn', { onclick: () => MD.run('help.markdown') }, MD.icon('help', 18), 'Markdown tour')));
     },
   };

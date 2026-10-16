@@ -376,7 +376,7 @@
   C('help.search', { label: 'Search commands', icon: 'search', key: 'Alt+Q', keywords: 'tell me palette', run: () => { const s = document.getElementById('md-search'); s.focus(); s.select(); } });
   C('help.palette', { label: 'Command palette', icon: 'command', key: 'Mod+Shift+P', run: () => MD.run('help.search') });
   C('help.shortcuts', { label: 'Keyboard shortcuts', icon: 'keyboard', key: 'Mod+/', run: () => MD.shortcutsDialog() });
-  C('help.about', { label: 'About mdcraft', icon: 'logo', run: () => MD.openBackstage('about') });
+  C('help.about', { label: 'About MdCraft', icon: 'logo', run: () => MD.openBackstage('about') });
   C('help.markdown', { label: 'Markdown guide', icon: 'help', keywords: 'syntax help manual tour', run: () => MD.newFromTemplate('welcome') });
 
   // ================================================================== keyboard

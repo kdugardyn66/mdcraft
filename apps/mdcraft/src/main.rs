@@ -113,7 +113,7 @@ fn run(args: &[String]) -> Result<(), String> {
     let _menu = mac_menu();
 
     let window = WindowBuilder::new()
-        .with_title("mdcraft")
+        .with_title("MdCraft")
         .with_inner_size(LogicalSize::new(1360.0, 880.0))
         .with_min_inner_size(LogicalSize::new(820.0, 540.0))
         .with_window_icon(window_icon())
@@ -178,7 +178,7 @@ fn run(args: &[String]) -> Result<(), String> {
                         }
                         window.set_focus();
                     }
-                    "set-title" => window.set_title(msg["title"].as_str().unwrap_or("mdcraft")),
+                    "set-title" => window.set_title(msg["title"].as_str().unwrap_or("MdCraft")),
                     "quit" => {
                         app.shutdown();
                         *control_flow = ControlFlow::Exit;
@@ -349,9 +349,9 @@ fn linux_env() {
 fn mac_menu() -> Option<muda::Menu> {
     use muda::{AboutMetadata, Menu, PredefinedMenuItem, Submenu};
     let menu = Menu::new();
-    let about = AboutMetadata { name: Some("mdcraft".into()), version: Some(env!("CARGO_PKG_VERSION").into()), ..Default::default() };
+    let about = AboutMetadata { name: Some("MdCraft".into()), version: Some(env!("CARGO_PKG_VERSION").into()), ..Default::default() };
     let app_menu = Submenu::with_items(
-        "mdcraft",
+        "MdCraft",
         true,
         &[
             &PredefinedMenuItem::about(None, Some(about)),
@@ -384,5 +384,5 @@ fn mac_menu() -> Option<muda::Menu> {
 
 /// A last-resort message when the window can't even open.
 fn show_fatal(msg: &str) {
-    let _ = rfd::MessageDialog::new().set_title("mdcraft").set_description(msg).set_level(rfd::MessageLevel::Error).show();
+    let _ = rfd::MessageDialog::new().set_title("MdCraft").set_description(msg).set_level(rfd::MessageLevel::Error).show();
 }
