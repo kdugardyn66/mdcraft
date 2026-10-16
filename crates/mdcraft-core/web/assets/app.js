@@ -98,10 +98,100 @@
     if (!(await MD.confirmDiscard())) return;
     let f;
     try { f = await MD.api('/api/file?path=' + encodeURIComponent(path)); } catch (e) { MD.alert('Cannot open', e.message); return; }
-    setDoc({ path: f.path, name: f.name, saved: true, key: newKey() }, f.text);
+    setDoc({ path: f.path, name: f.name, saved: true, key: newKey(), diskStamp: f.stamp, keptOverDisk: false }, f.text);
     doc.savedText = f.text;
     MD.app.recent = null;
   };
+  /** The version of a file changed elsewhere, as a new unsaved document (next to the original,
+   *  so its pictures still show). */
+  MD.openCopy = async (path) => {
+    let f;
+    try { f = await MD.api('/api/file?recent=0&path=' + encodeURIComponent(path)); } catch (e) { MD.alert('Cannot open', e.message); return; }
+    const name = f.name.replace(/\.(md|markdown|mdown|mkd|txt)$/i, '') + ' (changed on disk).md';
+    setDoc({ path: MD.join(MD.dirname(f.path), name), name, saved: false, key: newKey(), diskStamp: null, keptOverDisk: false }, f.text);
+    doc.dirty = true; updateTitle(); updateStatus();
+    MD.toast('The version of “' + f.name + '” changed by another application, as a new document. Save it to keep it.', 6000);
+  };
+
+  // ================================================================== changes made by other applications
+  // The open file is checked every 1.5 s, when the window gets focus and just before saving.
+  // When another application changed it, MdCraft asks what to do with the two versions.
+  let diskBusy = false, saving = 0;
+  /** Resolves 'same' (nothing to do), 'busy', or the choice made: 'reload', 'merge', 'window', 'keep'. */
+  async function checkDisk(beforeSave) {
+    if (!doc.open || !doc.saved || !doc.diskStamp) return 'same';
+    if (diskBusy) return 'busy';
+    if (!beforeSave && (saving || MD.dialogOpen() || (MD.presenting && MD.presenting()))) return 'same'; // ask later
+    diskBusy = true;
+    try {
+      const path = doc.path;
+      let st;
+      try { st = await MD.api('/api/file/stat?path=' + encodeURIComponent(path)); } catch (e) { return 'same'; }
+      if (path !== doc.path || st.stamp === doc.diskStamp) return 'same';
+      if (!st.exists) {
+        if (doc.diskStamp !== 'missing') {
+          doc.diskStamp = 'missing'; doc.keptOverDisk = true; doc.dirty = true; updateTitle(); updateStatus();
+          MD.toast('“' + doc.name + '” was moved or deleted by another application. Save to keep it.', 6000);
+        }
+        return 'same';
+      }
+      let f;
+      try { f = await MD.api('/api/file?recent=0&path=' + encodeURIComponent(path)); } catch (e) { return 'same'; }
+      if (path !== doc.path) return 'same';
+      const disk = f.text, mine = E.get();
+      if (disk === mine || disk === doc.savedText) {
+        // only touched, or changed to exactly what is in the editor
+        doc.diskStamp = f.stamp;
+        if (disk === mine) { doc.savedText = disk; doc.keptOverDisk = false; doc.dirty = false; updateTitle(); updateStatus(); }
+        return 'same';
+      }
+      const dirty = doc.dirty;
+      const choice = await MD.dialog({
+        title: 'MdCraft',
+        width: 600,
+        body: h('div',
+          h('p.md-dlg-text', h('b', '“' + doc.name + '” was changed by another application.')),
+          h('p.md-hint', dirty
+            ? 'You also have unsaved changes. Merge combines both versions (conflicts are marked in the text), Reload discards your changes, Open in New Window shows the other version as a new document.'
+            : 'Reload shows the new version here. Open in New Window shows it as a new document and keeps this one as it is.')),
+        buttons: [
+          { label: 'Keep Mine', value: 'keep', left: true },
+          MD.isNative() ? { label: 'Open in New Window', value: 'window' } : null,
+          { label: dirty ? 'Reload (Discard Mine)' : 'Reload', value: 'reload', primary: !dirty, danger: dirty },
+          dirty ? { label: 'Merge', value: 'merge', primary: true } : null,
+        ].filter(Boolean),
+      }) || 'keep';
+      if (path !== doc.path) return 'same';
+      if (choice === 'reload') {
+        doc.savedText = disk;
+        E.replaceAll(disk);
+        Object.assign(doc, { diskStamp: f.stamp, keptOverDisk: false, dirty: false });
+        discardAutosave();
+        MD.toast('Reloaded “' + doc.name + '”. Undo brings your version back.');
+      } else if (choice === 'merge') {
+        let r;
+        try { r = await MD.api('/api/merge', { base: doc.savedText || '', ours: E.get(), theirs: disk }); } catch (e) { MD.alert('Cannot merge', e.message); return 'keep'; }
+        doc.savedText = disk;
+        E.replaceAll(r.text);
+        Object.assign(doc, { diskStamp: f.stamp, keptOverDisk: false, dirty: r.text !== disk });
+        if (r.conflicts) {
+          E.find('<<<<<<< Your changes');
+          MD.alert('Merged with conflicts', (r.conflicts === 1 ? 'One place was' : r.conflicts + ' places were') + ' changed in both versions. Each is marked between “<<<<<<< Your changes” and “>>>>>>> Changed on disk”: keep what you want, remove the markers, then save.');
+        } else {
+          MD.toast(doc.dirty ? 'Merged both versions. Save to keep the result.' : 'Merged: both versions are the same.', 5000);
+        }
+      } else {
+        if (choice === 'window') MD.native('new-window', { path, copy: true });
+        // the editor's version stays; saving it replaces the other one
+        Object.assign(doc, { diskStamp: f.stamp, keptOverDisk: true, dirty: true });
+      }
+      updateTitle(); updateStatus();
+      return choice;
+    } finally { diskBusy = false; }
+  }
+  MD.checkDisk = checkDisk;
+  setInterval(() => { if (MD.booted) checkDisk(false); }, 1500);
+  addEventListener('focus', () => { if (MD.booted) checkDisk(false); });
   MD.openRecovered = async (v) => {
     if (!(await MD.confirmDiscard())) return;
     const name = v.name || 'Recovered.md';
@@ -147,17 +237,23 @@
     return false;
   };
   MD.saveTo = async (path, quiet) => {
+    // Don't silently overwrite what another application just wrote.
+    if (doc.saved && path === doc.path) {
+      const c = await checkDisk(true);
+      if (c === 'busy' || c === 'reload' || c === 'merge') return false;
+    }
     const text = E.get();
+    saving++;
     try {
       const r = await MD.api('/api/file/save', { path, text });
       const moved = r.path !== doc.path;
-      Object.assign(doc, { path: r.path, name: r.name, saved: true, dirty: E.get() !== text, lastSaved: Date.now(), savedText: text });
+      Object.assign(doc, { path: r.path, name: r.name, saved: true, dirty: E.get() !== text, lastSaved: Date.now(), savedText: text, diskStamp: r.stamp, keptOverDisk: false });
       if (moved) pushNow();
       discardAutosave();
       updateTitle(); updateStatus();
       if (!quiet) MD.toast('Saved ' + r.name);
       return true;
-    } catch (e) { MD.alert('Cannot save', e.message); return false; }
+    } catch (e) { MD.alert('Cannot save', e.message); return false; } finally { saving--; }
   };
   MD.saveCopy = async () => {
     const name = MD.suggestName().replace(/\.md$/, '') + ' (copy).md';
@@ -192,7 +288,7 @@
       Object.assign(doc, { open: true, path: MD.join(MD.app.documents, 'Document ' + (++untitledN.document) + '.md'), name: 'Document ' + untitledN.document + '.md', saved: false, key: newKey() });
       document.body.classList.remove('md-no-document');
     }
-    doc.dirty = doc.savedText === undefined || E.get() !== doc.savedText || !doc.saved;
+    doc.dirty = doc.savedText === undefined || E.get() !== doc.savedText || !doc.saved || !!doc.keptOverDisk;
     clearTimeout(pushTimer);
     pushTimer = setTimeout(pushNow, 70);
     updateTitle();
@@ -580,6 +676,7 @@
   MD.editProperties = () => MD.openBackstage('info');
 
   // ================================================================== native shell events
+  let openQueue = Promise.resolve();
   window.__mdNative = {
     /** The window's close button: ask about unsaved changes, then let the shell quit. */
     async requestClose() {
@@ -598,16 +695,23 @@
       for (const p of csvs) E.insertBlock('@import "' + await MD.relativeAsset(p, false) + '"');
       for (const p of mds) if (pics.length || csvs.length) E.insert('[' + MD.basename(p) + '](' + await MD.relativeAsset(p, false) + ')');
     },
-    /** Files opened from Finder (double-click, Open With, the Dock icon). */
-    async opened(paths) {
-      const isMd = (p) => /\.(md|markdown|mdown|mkd|txt)$/i.test(p);
-      const mds = paths.filter(isMd);
-      const others = paths.filter((p) => !isMd(p));
-      for (const p of mds) {
-        if (doc.open && doc.path === p) continue; // already showing it
-        if (!doc.open) await MD.openPath(p); else MD.native('new-window', { path: p });
-      }
-      if (others.length) await window.__mdNative.dropped(others);
+    /**
+     * Files opened from Finder (double-click, Open With, the Dock icon). Each Markdown file gets
+     * its own window: the first one this window when it has no document, the others new windows.
+     * Finder may send a selection as several events; they are handled one after the other.
+     */
+    opened(paths) {
+      openQueue = openQueue.then(async () => {
+        const isMd = (p) => /\.(md|markdown|mdown|mkd|txt)$/i.test(p);
+        const mds = [...new Set(paths.filter(isMd))];
+        const others = paths.filter((p) => !isMd(p));
+        for (const p of mds) {
+          if (doc.open && doc.path === p) continue; // already showing it
+          if (!doc.open) await MD.openPath(p); else MD.native('new-window', { path: p });
+        }
+        if (others.length) await window.__mdNative.dropped(others);
+      }).catch((e) => console.warn(e));
+      return openQueue;
     },
     open(path) { MD.openPath(path); },
     template(id) { MD.newFromTemplate(id); },
@@ -636,6 +740,7 @@
     updateTitle();
     const st = MD.app.startup || {};
     if (st.open) await MD.openPath(st.open);
+    else if (st.copyOf) await MD.openCopy(st.copyOf);
     else if (st.template) await MD.newFromTemplate(st.template);
     else if (MD.pref('startup') === 'blank') await MD.newFromTemplate('blank');
     else if (MD.pref('startup') === 'last' && (MD.app.recent || []).find((r) => !r.missing)) await MD.openPath(MD.app.recent.find((r) => !r.missing).path);

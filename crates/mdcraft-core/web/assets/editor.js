@@ -213,6 +213,23 @@
     view.scrollDOM.scrollTop = 0;
   };
 
+  /**
+   * Replaces the text with `text` as one undoable edit that only touches what differs, so the
+   * cursor and scroll position stay put (reloading or merging a file changed elsewhere).
+   */
+  E.replaceAll = function (text) {
+    const old = view.state.doc.toString();
+    if (old === text) return;
+    const hi = (s, i) => { const c = s.charCodeAt(i); return c >= 0xd800 && c <= 0xdbff; };
+    let a = 0;
+    while (a < old.length && a < text.length && old[a] === text[a]) a++;
+    if (a > 0 && hi(old, a - 1)) a--; // don't split a surrogate pair
+    let b = 0;
+    while (b < old.length - a && b < text.length - a && old[old.length - 1 - b] === text[text.length - 1 - b]) b++;
+    if (b > 0 && hi(old, old.length - b - 1)) b--;
+    view.dispatch({ changes: { from: a, to: old.length - b, insert: text.slice(a, text.length - b) }, userEvent: 'input.replace' });
+  };
+
   // ------------------------------------------------------------------ helpers
   const SEL = '\u0001';
   /** Inserts `text` at the selection. `\u0001…\u0001` marks what to select afterwards. */

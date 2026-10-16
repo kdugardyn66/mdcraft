@@ -21,6 +21,7 @@ serde_json = "1"
 flate2 = "1"
 ureq = { version = "2", features = ["native-certs"] }
 libc = "0.2"
+diffy = "0.4"
 
 tao = "0.37"
 wry = "0.57"

@@ -23,7 +23,7 @@
 ## Rust crates (compiled in)
 
 comrak (BSD-2-Clause); tao, wry, muda (Apache-2.0 OR MIT); rfd (MIT); serde, serde_json, ureq, flate2,
-libc, png (MIT OR Apache-2.0); and their dependencies (`cargo tree`).
+libc, png, diffy (MIT OR Apache-2.0); and their dependencies (`cargo tree`).
 
 ## Used when installed (not bundled)
 

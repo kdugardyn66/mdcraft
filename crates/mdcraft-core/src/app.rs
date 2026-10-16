@@ -84,6 +84,8 @@ pub struct App {
     pub h264: AtomicBool,
     /// What the window should show first: `{"open": path}`, `{"template": id}` or null (the start page).
     pub startup: Mutex<Value>,
+    /// The page has read `startup` (set while holding its lock).
+    pub startup_read: AtomicBool,
     /// Requests from AI agents for the editor in the page (`--control`, see [`crate::agent`]).
     pub agent: crate::agent::Bridge,
 }
@@ -105,6 +107,7 @@ impl App {
             scripts_allowed: AtomicBool::new(false),
             h264: AtomicBool::new(true),
             startup: Mutex::new(Value::Null),
+            startup_read: AtomicBool::new(false),
             agent: crate::agent::Bridge::default(),
         });
         // A finished background job: re-render so the result shows up.

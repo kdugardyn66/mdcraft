@@ -5,6 +5,18 @@
 - macOS: opening a `.md` file from Finder (double-click, Open With, or dropping it on the Dock
   icon) now opens it. Finder sends documents as an Apple Event, which the app ignored; it only
   read the command line. With a document already open, the file opens in a new window.
+- macOS: selecting several Markdown files in Finder and choosing Open (or Open With → MdCraft)
+  opens each one in its own window, also when Finder sends the selection as several events.
+- A document changed by another application while it is open: MdCraft notices (within 1.5 s,
+  when the window gets focus, and before saving, so it never silently overwrites the other
+  version) and asks what to do: **Reload** the new version (Undo brings yours back), **Merge**
+  it with your unsaved changes (a three-way merge; where both changed the same lines, both
+  versions are kept between `<<<<<<< Your changes` and `>>>>>>> Changed on disk`), **Open in New
+  Window** as a new unsaved document, or **Keep Mine**. Merge is offered when you have unsaved
+  changes. A file moved or deleted elsewhere is reported once and kept open as unsaved.
+- `mdcraft --copy-of FILE.md`: FILE as a new, unsaved document. New API routes for the page:
+  `GET /api/file/stat`, `POST /api/merge`; `/api/file` and `/api/file/save` return a `stamp`.
+- New dependency: `diffy` (MIT OR Apache-2.0) for the three-way merge.
 - macOS: `Info.plist` declares the Markdown type (`net.daringfireball.markdown`) so Finder
   matches `.md`/`.markdown` files on systems that don't define it.
 

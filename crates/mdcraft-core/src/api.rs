@@ -35,6 +35,43 @@ fn err(code: u16, msg: impl Into<String>) -> crate::web::Response {
     json_resp(code, &json!({"error": msg.into()}))
 }
 
+/// Identifies one version of a file on disk (size and modification time), so the editor can
+/// tell when another application changed the document it has open.
+pub fn file_stamp(p: &Path) -> Option<String> {
+    let m = std::fs::metadata(p).ok().filter(|m| m.is_file())?;
+    let t = m.modified().ok().and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map(|d| d.as_nanos()).unwrap_or(0);
+    Some(format!("{}:{t}", m.len()))
+}
+
+/// A three-way merge of the editor's text (`ours`) and the file on disk (`theirs`), both
+/// changed from `base` (the text last loaded or saved). Returns the merged text and the
+/// number of conflicts, which are marked in the text like git does.
+pub fn merge_texts(base: &str, ours: &str, theirs: &str) -> (String, usize) {
+    let mut opts = diffy::MergeOptions::new();
+    opts.set_conflict_style(diffy::ConflictStyle::Merge);
+    match opts.merge(base, ours, theirs) {
+        Ok(text) => (text, 0),
+        Err(text) => {
+            let mut n = 0;
+            let out: Vec<String> = text
+                .split_inclusive('\n')
+                .map(|l| {
+                    let (body, nl) = l.strip_suffix('\n').map(|b| (b, "\n")).unwrap_or((l, ""));
+                    match body {
+                        "<<<<<<< ours" => {
+                            n += 1;
+                            format!("<<<<<<< Your changes{nl}")
+                        }
+                        ">>>>>>> theirs" => format!(">>>>>>> Changed on disk{nl}"),
+                        _ => l.to_string(),
+                    }
+                })
+                .collect();
+            (out.concat(), n)
+        }
+    }
+}
+
 fn expand(p: &str) -> PathBuf {
     let p = p.trim();
     if let Some(rest) = p.strip_prefix("~/") {
@@ -65,8 +102,11 @@ pub fn handle(app: &Arc<App>, req: Request, path: &str, qs: &[(String, String)])
                 "author": prefs::author(),
                 "prefs": prefs::load(),
                 "recent": prefs::recent(),
-                // Read once: a reload must not reopen it, and the shell sees what was not consumed.
-                "startup": app.startup.lock().map(|mut s| std::mem::take(&mut *s)).unwrap_or(Value::Null),
+                "startup": app.startup.lock().map(|s| {
+                    // under the same lock, so the window knows whether a file it adds later is seen
+                    app.startup_read.store(true, std::sync::atomic::Ordering::SeqCst);
+                    s.clone()
+                }).unwrap_or(Value::Null),
                 "agent": app.agent.enabled.load(std::sync::atomic::Ordering::SeqCst),
             });
             req.respond(json_resp(200, &v))
@@ -88,8 +128,11 @@ pub fn handle(app: &Arc<App>, req: Request, path: &str, qs: &[(String, String)])
                     Ok(bytes) => {
                         let text = String::from_utf8(bytes).unwrap_or_else(|e| String::from_utf8_lossy(e.as_bytes()).into_owned());
                         let text = text.strip_prefix('\u{feff}').map(|s| s.to_string()).unwrap_or(text);
-                        prefs::add_recent(&p);
-                        req.respond(json_resp(200, &json!({"path": p.to_string_lossy(), "text": text, "name": file_name(&p)})))
+                        // `recent=0`: a check for changes made elsewhere, not the user opening it.
+                        if q(qs, "recent") != Some("0") {
+                            prefs::add_recent(&p);
+                        }
+                        req.respond(json_resp(200, &json!({"path": p.to_string_lossy(), "text": text, "name": file_name(&p), "stamp": file_stamp(&p)})))
                     }
                     Err(e) => req.respond(err(500, format!("cannot read {}: {e}", p.display()))),
                 },
@@ -113,10 +156,25 @@ pub fn handle(app: &Arc<App>, req: Request, path: &str, qs: &[(String, String)])
                     if recent {
                         prefs::add_recent(&p);
                     }
-                    req.respond(json_resp(200, &json!({"ok": true, "path": p.to_string_lossy(), "name": file_name(&p)})))
+                    req.respond(json_resp(200, &json!({"ok": true, "path": p.to_string_lossy(), "name": file_name(&p), "stamp": file_stamp(&p)})))
                 }
                 Err(e) => req.respond(err(500, format!("cannot save {}: {e}", p.display()))),
             }
+        }
+        ("GET", "/api/file/stat") => {
+            let Some(p) = q(qs, "path") else { return Ok(req.respond(err(400, "path required"))) };
+            let p = norm_path(&expand(p));
+            let stamp = file_stamp(&p);
+            req.respond(json_resp(200, &json!({"exists": stamp.is_some(), "stamp": stamp})))
+        }
+        ("POST", "/api/merge") => {
+            let body = read_json(&req);
+            let get = |k: &str| body.get(k).and_then(|v| v.as_str());
+            let (Some(base), Some(ours), Some(theirs)) = (get("base"), get("ours"), get("theirs")) else {
+                return Ok(req.respond(err(400, "base, ours and theirs required")));
+            };
+            let (text, conflicts) = merge_texts(base, ours, theirs);
+            req.respond(json_resp(200, &json!({"text": text, "conflicts": conflicts})))
         }
         ("GET", "/api/dir") => {
             let dir = q(qs, "path").filter(|s| !s.trim().is_empty()).map(expand).unwrap_or_else(util::documents_dir);
@@ -435,5 +493,36 @@ mod tests {
         assert_eq!(relative_path(Path::new("/a/b"), Path::new("/a/b/img/x.png")).as_deref(), Some("img/x.png"));
         assert_eq!(relative_path(Path::new("/a/b"), Path::new("/a/c/x.png")).as_deref(), Some("../c/x.png"));
         assert_eq!(relative_path(Path::new("/a/b/c/d"), Path::new("/x/y.png")), None);
+    }
+
+    #[test]
+    fn merges_edits_from_both_sides() {
+        let base = "# Title\n\nOne\n\nTwo\n\nThree\n";
+        let ours = "# Title\n\nOne, edited here\n\nTwo\n\nThree\n";
+        let theirs = "# Title\n\nOne\n\nTwo\n\nThree, edited elsewhere\n";
+        let (text, conflicts) = merge_texts(base, ours, theirs);
+        assert_eq!(conflicts, 0);
+        assert_eq!(text, "# Title\n\nOne, edited here\n\nTwo\n\nThree, edited elsewhere\n");
+    }
+
+    #[test]
+    fn marks_conflicts() {
+        let (text, conflicts) = merge_texts("a\nb\nc\n", "a\nmine\nc\n", "a\ntheirs\nc\n");
+        assert_eq!(conflicts, 1);
+        assert_eq!(text, "a\n<<<<<<< Your changes\nmine\n=======\ntheirs\n>>>>>>> Changed on disk\nc\n");
+    }
+
+    #[test]
+    fn stamps_change_with_the_file() {
+        let dir = std::env::temp_dir().join(format!("mdcraft-stamp-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let f = dir.join("a.md");
+        assert_eq!(file_stamp(&f), None);
+        std::fs::write(&f, "one").unwrap();
+        let a = file_stamp(&f).unwrap();
+        std::fs::write(&f, "three").unwrap();
+        assert_ne!(file_stamp(&f).unwrap(), a);
+        assert_eq!(file_stamp(&dir), None);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
