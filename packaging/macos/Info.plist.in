@@ -3,8 +3,8 @@
 <!-- packaging/macos/package.sh substitutes @VERSION@. -->
 <plist version="1.0">
 <dict>
-  <key>CFBundleDisplayName</key><string>mdcraft</string>
-  <key>CFBundleName</key><string>mdcraft</string>
+  <key>CFBundleDisplayName</key><string>MdCraft</string>
+  <key>CFBundleName</key><string>MdCraft</string>
   <key>CFBundleExecutable</key><string>mdcraft</string>
   <key>CFBundleIdentifier</key><string>io.github.kdugardyn.mdcraft</string>
   <key>CFBundlePackageType</key><string>APPL</string>

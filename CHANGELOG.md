@@ -6,6 +6,9 @@
   and export documents; `--connect [PORT]` adds `app_*` tools that drive a running window: editor
   text, cursor, and every command by id. `--root`, `--automation-read-root` and
   `--automation-write-root` keep the agent inside the folders you choose. See `docs/mcp.md`.
+- The app is called MdCraft: `MdCraft.app` and `MdCraft-<version>-macos-universal.dmg` on macOS,
+  “MdCraft” in the Linux applications menu. Commands and packages stay lowercase
+  (`mdcraft`, `mdcraft-cli`).
 - Windows is no longer supported: macOS and Linux only. Removed the Windows packaging script,
   the Windows CI runner, the `.ico` icon and the Windows-only code paths; building for Windows
   now stops with a clear error.

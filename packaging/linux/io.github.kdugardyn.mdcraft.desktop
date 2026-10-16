@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=mdcraft
+Name=MdCraft
 GenericName=Markdown Word Processor
 Comment=Write Markdown, get Word-style documents and PowerPoint-style slides
 Exec=mdcraft %F

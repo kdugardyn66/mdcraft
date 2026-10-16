@@ -164,7 +164,7 @@ if [ -n "$INSTALL" ]; then
   $S rm -rf "$PREFIX/share/doc/mdcraft" 2>/dev/null; $S cp -r "$STAGE/usr/share/doc/mdcraft" "$PREFIX/share/doc/" 2>/dev/null || true
   command -v update-desktop-database >/dev/null && $S update-desktop-database "$PREFIX/share/applications" 2>/dev/null || true
   command -v gtk-update-icon-cache >/dev/null && $S gtk-update-icon-cache -q -t "$PREFIX/share/icons/hicolor" 2>/dev/null || true
-  echo "mdcraft is in your applications menu."
+  echo "MdCraft is in your applications menu."
   if [ "$INSTALL" = user ] && [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
     echo "Add ~/.local/bin to your PATH to run 'mdcraft' from a terminal:"
     echo "  echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> ~/.bashrc"
