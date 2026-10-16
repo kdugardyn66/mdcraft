@@ -127,6 +127,9 @@ fn run(args: &[String]) -> Result<(), String> {
     let opened = Instant::now();
     let mut ready = false;
     let mut close_asked: Option<Instant> = None;
+    // Files Finder asked us to open (double-click, Open With, dropped on the Dock icon)
+    // before the page was ready to take them.
+    let mut pending: Vec<PathBuf> = Vec::new();
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::WaitUntil(Instant::now() + Duration::from_millis(250));
@@ -152,6 +155,29 @@ fn run(args: &[String]) -> Result<(), String> {
                 close_asked = Some(Instant::now());
                 let _ = webview.evaluate_script("window.__mdNative && window.__mdNative.requestClose()");
             }
+            // macOS hands documents to an app with an Apple Event, not on the command line.
+            Event::Opened { urls } => {
+                let paths: Vec<PathBuf> = urls.iter().filter_map(|u| u.to_file_path().ok()).filter(|p| p.is_file()).collect();
+                if paths.is_empty() {
+                    return;
+                }
+                if ready {
+                    deliver_opened(&webview, &paths);
+                    window.set_focus();
+                } else {
+                    // Cold launch: let the page open the first file instead of the start page
+                    // (it reads `startup` when it boots); "ready" delivers whatever is left.
+                    let mut rest = paths.into_iter();
+                    if let (Some(first), Ok(mut s)) = (rest.next(), app.startup.lock()) {
+                        if s.get("open").is_none() && s.get("template").is_none() {
+                            *s = json!({"open": first.to_string_lossy()});
+                        } else {
+                            pending.push(first);
+                        }
+                    }
+                    pending.extend(rest);
+                }
+            }
             Event::WindowEvent { event: WindowEvent::DroppedFile(path), .. } => {
                 let _ = proxy.send_event(UserEvent::Dropped(vec![path]));
             }
@@ -172,6 +198,16 @@ fn run(args: &[String]) -> Result<(), String> {
                 match cmd {
                     "ready" => {
                         ready = true;
+                        // An Opened event that came after the page had already read `startup`.
+                        if let Ok(mut s) = app.startup.lock() {
+                            if let Some(p) = s.get("open").and_then(|v| v.as_str()).map(PathBuf::from) {
+                                pending.insert(0, p);
+                            }
+                            *s = Value::Null;
+                        }
+                        if !pending.is_empty() {
+                            deliver_opened(&webview, &std::mem::take(&mut pending));
+                        }
                         if !shown {
                             window.set_visible(true);
                             shown = true;
@@ -279,6 +315,14 @@ fn build_webview(window: &Window, app: &Arc<App>, proxy: EventLoopProxy<UserEven
         builder.build_gtk(vbox).map_err(|e| format!("cannot create the web view (is WebKitGTK 4.1 installed?): {e}"))?
     };
     Ok(webview)
+}
+
+/// Files opened from Finder while the window is up: Markdown files open here when no
+/// document is open, otherwise in new windows; pictures and tables go into the document.
+fn deliver_opened(webview: &WebView, paths: &[PathBuf]) {
+    let list: Vec<String> = paths.iter().map(|p| p.to_string_lossy().to_string()).collect();
+    let js = format!("window.__mdNative && window.__mdNative.opened({})", json!(list));
+    let _ = webview.evaluate_script(&js);
 }
 
 fn add_filters(mut d: rfd::FileDialog, filters: &Value) -> rfd::FileDialog {

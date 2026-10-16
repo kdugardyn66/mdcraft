@@ -65,7 +65,8 @@ pub fn handle(app: &Arc<App>, req: Request, path: &str, qs: &[(String, String)])
                 "author": prefs::author(),
                 "prefs": prefs::load(),
                 "recent": prefs::recent(),
-                "startup": app.startup.lock().map(|s| s.clone()).unwrap_or(Value::Null),
+                // Read once: a reload must not reopen it, and the shell sees what was not consumed.
+                "startup": app.startup.lock().map(|mut s| std::mem::take(&mut *s)).unwrap_or(Value::Null),
                 "agent": app.agent.enabled.load(std::sync::atomic::Ordering::SeqCst),
             });
             req.respond(json_resp(200, &v))

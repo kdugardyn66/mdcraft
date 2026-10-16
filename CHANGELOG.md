@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- macOS: opening a `.md` file from Finder (double-click, Open With, or dropping it on the Dock
+  icon) now opens it. Finder sends documents as an Apple Event, which the app ignored; it only
+  read the command line. With a document already open, the file opens in a new window.
+- macOS: `Info.plist` declares the Markdown type (`net.daringfireball.markdown`) so Finder
+  matches `.md`/`.markdown` files on systems that don't define it.
+
 ## 0.2.0 — 2026-10-16
 
 - MCP server for AI agents: `mdcraft-cli mcp` (stdio). Headless tools create, read, edit, inspect

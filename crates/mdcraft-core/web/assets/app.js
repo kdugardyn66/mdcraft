@@ -598,6 +598,17 @@
       for (const p of csvs) E.insertBlock('@import "' + await MD.relativeAsset(p, false) + '"');
       for (const p of mds) if (pics.length || csvs.length) E.insert('[' + MD.basename(p) + '](' + await MD.relativeAsset(p, false) + ')');
     },
+    /** Files opened from Finder (double-click, Open With, the Dock icon). */
+    async opened(paths) {
+      const isMd = (p) => /\.(md|markdown|mdown|mkd|txt)$/i.test(p);
+      const mds = paths.filter(isMd);
+      const others = paths.filter((p) => !isMd(p));
+      for (const p of mds) {
+        if (doc.open && doc.path === p) continue; // already showing it
+        if (!doc.open) await MD.openPath(p); else MD.native('new-window', { path: p });
+      }
+      if (others.length) await window.__mdNative.dropped(others);
+    },
     open(path) { MD.openPath(path); },
     template(id) { MD.newFromTemplate(id); },
     menu(cmd) { MD.run(cmd); },
