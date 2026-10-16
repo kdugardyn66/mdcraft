@@ -630,6 +630,8 @@
     else if (MD.pref('startup') === 'last' && (MD.app.recent || []).find((r) => !r.missing)) await MD.openPath(MD.app.recent.find((r) => !r.missing).path);
     else MD.openBackstage('home');
     if (MD.isNative()) MD.native('ready', {});
+    MD.booted = true;
+    if (MD.agent) MD.agent.start();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();

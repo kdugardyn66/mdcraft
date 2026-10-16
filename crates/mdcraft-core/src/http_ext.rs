@@ -5,6 +5,10 @@ use std::sync::Arc;
 use crate::web::Request;
 
 pub fn handle_extra(app: &Arc<App>, req: Request, path: &str, qs: &[(String, String)]) -> std::io::Result<()> {
+    let req = match crate::agent::handle(app, req, path) {
+        Ok(done) => return done,
+        Err(req) => req,
+    };
     let req = match crate::api::handle(app, req, path, qs) {
         Ok(done) => return done,
         Err(req) => req,

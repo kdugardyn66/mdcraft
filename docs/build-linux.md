@@ -338,8 +338,8 @@ The same works for other targets, for example `registry.fedoraproject.org/fedora
 
 ### GitHub Actions
 
-Every push to GitHub runs `.github/workflows/ci.yml`, which builds and tests mdcraft on Linux,
-macOS and Windows. The programs can be downloaded from **Actions › (latest run) › Artifacts**.
+Every push to GitHub runs `.github/workflows/ci.yml`, which builds and tests mdcraft on Linux
+and macOS. The programs can be downloaded from **Actions › (latest run) › Artifacts**.
 The Linux job runs on `ubuntu-24.04`; change it to `ubuntu-22.04` if the downloads must run on
 Ubuntu 22.04 and Mint 21.
 

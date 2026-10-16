@@ -13,7 +13,11 @@
 //! ```
 #![allow(clippy::ptr_arg, clippy::if_same_then_else, clippy::type_complexity)] // style of the code inherited from MarkDown Live
 
+#[cfg(not(unix))]
+compile_error!("mdcraft supports macOS and Linux only (Windows support was removed in 0.2.0)");
 
+
+pub mod agent;
 pub mod api;
 pub mod app;
 pub mod config;
@@ -37,7 +41,16 @@ use std::sync::Arc;
 
 /// Starts the server and the render worker. Returns the app (its `url()` opens the editor).
 pub fn start(mode: Mode) -> Result<Arc<App>, String> {
-    let app = App::new(mode, prefs::render_settings());
+    start_on(mode, None)
+}
+
+/// Like [`start`], on a fixed port (`--control PORT`) instead of the configured one.
+pub fn start_on(mode: Mode, port: Option<u16>) -> Result<Arc<App>, String> {
+    let mut settings = prefs::render_settings();
+    if let Some(p) = port {
+        settings.port = p;
+    }
+    let app = App::new(mode, settings);
     http::start(&app)?;
     app.start_worker();
     Ok(app)

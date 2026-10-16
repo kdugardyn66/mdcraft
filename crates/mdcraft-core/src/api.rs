@@ -37,7 +37,7 @@ fn err(code: u16, msg: impl Into<String>) -> crate::web::Response {
 
 fn expand(p: &str) -> PathBuf {
     let p = p.trim();
-    if let Some(rest) = p.strip_prefix("~/").or_else(|| p.strip_prefix("~\\")) {
+    if let Some(rest) = p.strip_prefix("~/") {
         if let Some(h) = util::home_dir() {
             return h.join(rest);
         }
@@ -66,6 +66,7 @@ pub fn handle(app: &Arc<App>, req: Request, path: &str, qs: &[(String, String)])
                 "prefs": prefs::load(),
                 "recent": prefs::recent(),
                 "startup": app.startup.lock().map(|s| s.clone()).unwrap_or(Value::Null),
+                "agent": app.agent.enabled.load(std::sync::atomic::Ordering::SeqCst),
             });
             req.respond(json_resp(200, &v))
         }
@@ -276,17 +277,9 @@ fn process_alive(pid: u32) -> bool {
         let comm = std::fs::read_to_string(format!("/proc/{pid}/comm")).unwrap_or_default();
         comm.trim().starts_with("mdcraft")
     }
-    #[cfg(all(unix, not(target_os = "linux")))]
+    #[cfg(not(target_os = "linux"))]
     {
         std::process::Command::new("kill").arg("-0").arg(pid.to_string()).stderr(std::process::Stdio::null()).status().map(|s| s.success()).unwrap_or(false)
-    }
-    #[cfg(windows)]
-    {
-        std::process::Command::new("tasklist")
-            .args(["/FI", &format!("PID eq {pid}"), "/NH"])
-            .output()
-            .map(|o| String::from_utf8_lossy(&o.stdout).contains(&pid.to_string()))
-            .unwrap_or(false)
     }
 }
 
@@ -378,7 +371,7 @@ pub fn relative_path(base: &Path, target: &Path) -> Option<String> {
     let t: Vec<_> = target.components().collect();
     let common = b.iter().zip(t.iter()).take_while(|(x, y)| x == y).count();
     if common == 0 {
-        return None; // different drive
+        return None; // nothing in common
     }
     let ups = b.len() - common;
     if ups > 2 {
@@ -438,9 +431,6 @@ mod tests {
     use super::*;
     #[test]
     fn relative() {
-        if cfg!(windows) {
-            return;
-        }
         assert_eq!(relative_path(Path::new("/a/b"), Path::new("/a/b/img/x.png")).as_deref(), Some("img/x.png"));
         assert_eq!(relative_path(Path::new("/a/b"), Path::new("/a/c/x.png")).as_deref(), Some("../c/x.png"));
         assert_eq!(relative_path(Path::new("/a/b/c/d"), Path::new("/x/y.png")), None);

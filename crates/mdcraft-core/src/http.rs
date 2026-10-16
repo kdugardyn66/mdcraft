@@ -22,17 +22,10 @@ pub fn start(app: &Arc<App>) -> Result<u16, String> {
 }
 
 pub fn write_private(path: &Path, data: &[u8]) -> std::io::Result<()> {
-    #[cfg(unix)]
-    {
-        use std::io::Write;
-        use std::os::unix::fs::OpenOptionsExt;
-        let mut f = std::fs::OpenOptions::new().write(true).create(true).truncate(true).mode(0o600).open(path)?;
-        f.write_all(data)
-    }
-    #[cfg(not(unix))]
-    {
-        std::fs::write(path, data)
-    }
+    use std::io::Write;
+    use std::os::unix::fs::OpenOptionsExt;
+    let mut f = std::fs::OpenOptions::new().write(true).create(true).truncate(true).mode(0o600).open(path)?;
+    f.write_all(data)
 }
 
 pub fn json_resp(code: u16, v: &Value) -> Response {

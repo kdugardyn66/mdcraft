@@ -32,7 +32,6 @@ pub fn random_token() -> String {
 
 pub fn home_dir() -> Option<PathBuf> {
     std::env::var_os("HOME")
-        .or_else(|| std::env::var_os("USERPROFILE"))
         .map(PathBuf::from)
 }
 
@@ -40,8 +39,6 @@ pub fn home_dir() -> Option<PathBuf> {
 pub fn cache_dir() -> PathBuf {
     let base = if cfg!(target_os = "macos") {
         home_dir().map(|h| h.join("Library").join("Caches"))
-    } else if cfg!(windows) {
-        std::env::var_os("LOCALAPPDATA").map(PathBuf::from)
     } else {
         std::env::var_os("XDG_CACHE_HOME")
             .map(PathBuf::from)
@@ -61,8 +58,6 @@ pub fn config_dir() -> PathBuf {
     }
     let base = if cfg!(target_os = "macos") {
         home_dir().map(|h| h.join("Library").join("Application Support"))
-    } else if cfg!(windows) {
-        std::env::var_os("APPDATA").map(PathBuf::from)
     } else {
         std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from).or_else(|| home_dir().map(|h| h.join(".config")))
     };
@@ -120,17 +115,12 @@ pub fn percent_encode_path(s: &str) -> String {
     out
 }
 
-/// `file:///Users/x/a%20b.puml` -> `/Users/x/a b.puml` (also `file:///C:/x` on Windows).
+/// `file:///Users/x/a%20b.puml` -> `/Users/x/a b.puml`.
 pub fn uri_to_path(uri: &str) -> Option<PathBuf> {
     let rest = uri.strip_prefix("file://")?;
     let rest = rest.split(['?', '#']).next().unwrap_or(rest);
     let decoded = percent_decode(rest);
-    if cfg!(windows) {
-        let d = decoded.trim_start_matches('/');
-        Some(PathBuf::from(d.replace('/', "\\")))
-    } else {
-        Some(PathBuf::from(decoded))
-    }
+    Some(PathBuf::from(decoded))
 }
 
 pub fn path_to_uri(p: &Path) -> String {
@@ -172,21 +162,14 @@ pub fn byte_to_utf16(line: &str, byte: usize) -> usize {
 /// Looks a program up on PATH.
 pub fn which(name: &str) -> Option<PathBuf> {
     let p = Path::new(name);
-    if p.is_absolute() || name.contains('/') || name.contains('\\') {
+    if p.is_absolute() || name.contains('/') {
         return if p.is_file() { Some(p.to_path_buf()) } else { None };
     }
     let path = std::env::var_os("PATH")?;
-    let exts: Vec<String> = if cfg!(windows) {
-        vec![".exe".into(), ".cmd".into(), ".bat".into(), String::new()]
-    } else {
-        vec![String::new()]
-    };
     for dir in std::env::split_paths(&path) {
-        for ext in &exts {
-            let cand = dir.join(format!("{name}{ext}"));
-            if cand.is_file() {
-                return Some(cand);
-            }
+        let cand = dir.join(name);
+        if cand.is_file() {
+            return Some(cand);
         }
     }
     None
@@ -207,15 +190,6 @@ pub fn find_chromium() -> Option<PathBuf> {
                 cands.push(h.join("Applications").join(&rel));
             }
         }
-    } else if cfg!(windows) {
-        for base in ["PROGRAMFILES", "PROGRAMFILES(X86)", "LOCALAPPDATA"] {
-            if let Some(b) = std::env::var_os(base).map(PathBuf::from) {
-                cands.push(b.join("Chromium\\Application\\chrome.exe"));
-                cands.push(b.join("Google\\Chrome\\Application\\chrome.exe"));
-                cands.push(b.join("Microsoft\\Edge\\Application\\msedge.exe"));
-                cands.push(b.join("BraveSoftware\\Brave-Browser\\Application\\brave.exe"));
-            }
-        }
     }
     if let Some(p) = cands.into_iter().find(|p| p.is_file()) {
         return Some(p);
@@ -228,7 +202,6 @@ pub fn find_chromium() -> Option<PathBuf> {
 fn spawn_detached(argv: &[String]) -> std::io::Result<()> {
     let mut cmd = Command::new(&argv[0]);
     cmd.args(&argv[1..]).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null());
-    #[cfg(unix)]
     {
         use std::os::unix::process::CommandExt;
         unsafe {
@@ -260,8 +233,6 @@ pub fn open_url(url: &str, browser: &[String]) {
     let result = if argv.is_empty() {
         let argv: Vec<String> = if cfg!(target_os = "macos") {
             vec!["open".into(), url.into()]
-        } else if cfg!(windows) {
-            vec!["cmd".into(), "/C".into(), "start".into(), String::new(), url.into()]
         } else {
             vec!["xdg-open".into(), url.into()]
         };
@@ -426,12 +397,10 @@ mod tests {
     }
     #[test]
     fn uri_roundtrip() {
-        if !cfg!(windows) {
-            let p = PathBuf::from("/tmp/a b/c#d.puml");
-            let u = path_to_uri(&p);
-            assert_eq!(u, "file:///tmp/a%20b/c%23d.puml");
-            assert_eq!(uri_to_path(&u).unwrap(), p);
-        }
+        let p = PathBuf::from("/tmp/a b/c#d.puml");
+        let u = path_to_uri(&p);
+        assert_eq!(u, "file:///tmp/a%20b/c%23d.puml");
+        assert_eq!(uri_to_path(&u).unwrap(), p);
     }
     #[test]
     fn split() {

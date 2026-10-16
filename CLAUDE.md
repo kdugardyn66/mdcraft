@@ -14,7 +14,8 @@ People trust mdcraft with their writing. This outranks feature work.
 ## Everything is a command
 User-visible actions are commands in `web/assets/commands.js` (`C('insert.chart', {...})`) with a
 label, icon, optional shortcut, `run`, and `checked`/`enabled`. The ribbon (`ribbon.js`), keyboard
-shortcuts and command search all dispatch by id. Add a command first, then put it on the ribbon.
+shortcuts and command search all dispatch by id. Add a command first, then put it on the ribbon. AI agents run the same commands through MCP
+(`app_run_command`), so a command that takes `args` is usable by agents too.
 
 ## Where things are
 | Path | What |
@@ -24,6 +25,7 @@ shortcuts and command search all dispatch by id. Add a command first, then put i
 | `crates/mdcraft-core/web/assets` | the UI: `app.html`, `app.css` (chrome), `themes.css` (document & slide themes), `editor.js`, `commands.js`, `ribbon.js`, `backstage.js`, `present.js`, `app.js` |
 | `crates/mdcraft-templates` + `templates/` | templates |
 | `apps/mdcraft` | desktop shell (IPC: `open-dialog`, `save-dialog`, `print`, `fullscreen`, `set-title`, `quit`, …) |
+| `apps/mdcraft-cli/src/{mcp,live}.rs`, `crates/mdcraft-core/src/agent.rs`, `web/assets/agent.js` | the MCP server and the agent bridge (`--control` / `--connect`), see `docs/mcp.md` |
 
 Web assets are embedded at build time: rebuild after changing them.
 

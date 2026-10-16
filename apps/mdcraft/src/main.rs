@@ -1,9 +1,10 @@
 //! mdcraft — the desktop app: a native window (tao) hosting the editor UI in the
-//! system webview (wry: WebKitGTK on Linux, WebView2 on Windows, WKWebView on macOS).
+//! system webview (wry: WebKitGTK on Linux, WKWebView on macOS).
 //!
 //! ```text
 //! mdcraft [FILE.md]                 open a document (or the start page)
 //! mdcraft --template ID             a new document from a template (report, pitch…)
+//! mdcraft --control [PORT]          let AI agents drive this window (mdcraft-cli mcp --connect)
 //! mdcraft --version
 //! ```
 //!
@@ -12,7 +13,6 @@
 //! page can't do: native open/save dialogs, the window title, closing with unsaved
 //! changes, files dropped on the window, full-screen slide shows and printing.
 
-#![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use mdcraft_core::{util, App, Mode};
@@ -46,7 +46,10 @@ fn main() {
         return;
     }
     if args.iter().any(|a| a == "--help" || a == "-h") {
-        println!("mdcraft {}\n\nUSAGE:\n  mdcraft [FILE.md]\n  mdcraft --template ID     (report, letter, pitch, status… see `mdcraft-cli templates`)\n", env!("CARGO_PKG_VERSION"));
+        println!(
+            "mdcraft {}\n\nUSAGE:\n  mdcraft [FILE.md]\n  mdcraft --template ID     (report, letter, pitch, status… see `mdcraft-cli templates`)\n  mdcraft --control [PORT]  let AI agents drive this window: mdcraft-cli mcp --connect [PORT]\n",
+            env!("CARGO_PKG_VERSION")
+        );
         return;
     }
     if let Err(e) = run(&args) {
@@ -66,6 +69,11 @@ fn startup(args: &[String]) -> Value {
                     return json!({"template": t});
                 }
             }
+            Some("--control") => {
+                if args.get(i + 1).map(|a| a.parse::<u16>().is_ok()).unwrap_or(false) {
+                    i += 1;
+                }
+            }
             Some(a) if !a.starts_with('-') && !a.starts_with("-psn_") => {
                 let p = util::norm_path(Path::new(a));
                 return if p.is_file() { json!({"open": p.to_string_lossy()}) } else { Value::Null };
@@ -77,13 +85,25 @@ fn startup(args: &[String]) -> Value {
     Value::Null
 }
 
+/// `--control [PORT]`: Some(port) (0 = any free port) when agents may drive the window.
+fn control_port(args: &[String]) -> Option<u16> {
+    let i = args.iter().position(|a| a == "--control")?;
+    Some(args.get(i + 1).and_then(|p| p.parse().ok()).unwrap_or(0))
+}
+
 fn run(args: &[String]) -> Result<(), String> {
     #[cfg(target_os = "linux")]
     linux_env();
 
-    let app = mdcraft_core::start(Mode::Desktop)?;
+    let control = control_port(args);
+    let app = mdcraft_core::start_on(Mode::Desktop, control.filter(|p| *p != 0))?;
     if let Ok(mut s) = app.startup.lock() {
         *s = startup(args);
+    }
+    if control.is_some() {
+        let file = mdcraft_core::agent::publish(&app)?;
+        let port = app.port.load(std::sync::atomic::Ordering::SeqCst);
+        eprintln!("mdcraft: agent control on 127.0.0.1:{port} ({}) — connect with: mdcraft-cli mcp --connect {port}", file.display());
     }
 
     let event_loop = EventLoopBuilder::<UserEvent>::with_user_event().build();
@@ -249,9 +269,9 @@ fn build_webview(window: &Window, app: &Arc<App>, proxy: EventLoopProxy<UserEven
             NewWindowResponse::Deny
         });
 
-    #[cfg(any(target_os = "windows", target_os = "macos"))]
+    #[cfg(target_os = "macos")]
     let webview = builder.build(window).map_err(|e| format!("cannot create the web view: {e}"))?;
-    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    #[cfg(not(target_os = "macos"))]
     let webview = {
         use tao::platform::unix::WindowExtUnix;
         use wry::WebViewBuilderExtUnix;
@@ -295,8 +315,6 @@ fn reveal(p: &Path) {
     let dir = if p.is_dir() { p.to_path_buf() } else { p.parent().map(|d| d.to_path_buf()).unwrap_or_default() };
     let r = if cfg!(target_os = "macos") {
         std::process::Command::new("open").arg("-R").arg(p).spawn()
-    } else if cfg!(windows) {
-        std::process::Command::new("explorer").arg(format!("/select,{}", p.display())).spawn()
     } else {
         std::process::Command::new("xdg-open").arg(&dir).spawn()
     };

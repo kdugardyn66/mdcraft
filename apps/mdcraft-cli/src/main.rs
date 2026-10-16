@@ -7,10 +7,15 @@
 //! mdcraft-cli export FILE.md [-o OUT.html]  a standalone web page
 //! mdcraft-cli serve [FILE.md] [--template ID] [--port N] [--no-open]
 //!                                           the editor in your browser
+//! mdcraft-cli mcp [--root DIR] [--connect [PORT]]
+//!                                           an MCP server for AI agents (stdio)
 //! mdcraft-cli doctor                        show the detected setup
 //! ```
 
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
+
+mod live;
+mod mcp;
 
 use mdcraft_core::{api, prefs, templates, util, Mode};
 use std::path::PathBuf;
@@ -23,8 +28,12 @@ USAGE:
   mdcraft-cli templates                     list the templates (documents and presentations)
   mdcraft-cli render FILE.md                print the rendered HTML fragment
   mdcraft-cli export FILE.md [-o OUT.html]  a standalone web page (libraries from jsDelivr)
-  mdcraft-cli serve [FILE.md] [--template ID] [--port N] [--no-open]
+  mdcraft-cli serve [FILE.md] [--template ID] [--port N] [--no-open] [--control]
                                             the mdcraft editor in your browser
+                                            (--control: AI agents may drive it, see mcp --connect)
+  mdcraft-cli mcp [--root DIR] [--automation-read-root DIR] [--automation-write-root DIR] [--connect [PORT]]
+                                            an MCP server for AI agents on stdin/stdout
+                                            (claude mcp add mdcraft -- mdcraft-cli mcp)
   mdcraft-cli doctor                        show the detected setup
   mdcraft-cli --version
 
@@ -43,6 +52,7 @@ fn main() -> ExitCode {
         "render" => cmd_render(rest),
         "export" => cmd_export(rest),
         "serve" | "open" => cmd_serve(rest),
+        "mcp" => mcp::run(rest),
         "doctor" => cmd_doctor(),
         "--version" | "-V" | "version" => {
             println!("mdcraft {}", env!("CARGO_PKG_VERSION"));
@@ -128,6 +138,7 @@ fn cmd_serve(args: &[String]) -> Result<(), String> {
     let mut template = None;
     let mut open = true;
     let mut port: Option<u16> = None;
+    let mut control = false;
     let mut i = 0;
     while i < args.len() {
         match args.get(i).map(|s| s.as_str()) {
@@ -140,6 +151,7 @@ fn cmd_serve(args: &[String]) -> Result<(), String> {
                 port = args.get(i).and_then(|s| s.parse().ok());
             }
             Some("--no-open") => open = false,
+            Some("--control") => control = true,
             Some(a) => file = Some(a.to_string()),
             None => {}
         }
@@ -151,6 +163,10 @@ fn cmd_serve(args: &[String]) -> Result<(), String> {
         std::env::set_var("MDCRAFT_SETTINGS", v.to_string());
     }
     let app = mdcraft_core::start(Mode::Browser)?;
+    if control {
+        let file = mdcraft_core::agent::publish(&app)?;
+        eprintln!("agent control on: {} (mdcraft-cli mcp --connect {})", file.display(), app.port.load(std::sync::atomic::Ordering::SeqCst));
+    }
     let startup = match (file, template) {
         (Some(f), _) => serde_json::json!({"open": util::norm_path(&PathBuf::from(f)).to_string_lossy()}),
         (None, Some(t)) => serde_json::json!({"template": t}),

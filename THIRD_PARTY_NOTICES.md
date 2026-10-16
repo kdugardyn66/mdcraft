@@ -27,5 +27,4 @@ libc, png (MIT OR Apache-2.0); and their dependencies (`cargo tree`).
 
 ## Used when installed (not bundled)
 
-Java + PlantUML, ffmpeg, Python and other interpreters for code chunks, WebKitGTK (Linux),
-Microsoft Edge WebView2 (Windows).
+Java + PlantUML, ffmpeg, Python and other interpreters for code chunks, WebKitGTK (Linux).

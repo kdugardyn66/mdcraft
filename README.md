@@ -9,7 +9,7 @@
 
 <p align="center">
   <img alt="Written in Rust" src="https://img.shields.io/badge/written%20in-Rust-0f7b6c?style=flat-square&logo=rust&logoColor=white">
-  <img alt="macOS, Windows, Linux" src="https://img.shields.io/badge/runs%20on-macOS%20%C2%B7%20Windows%20%C2%B7%20Linux-0b5f54?style=flat-square">
+  <img alt="macOS, Linux" src="https://img.shields.io/badge/runs%20on-macOS%20%C2%B7%20Linux-0b5f54?style=flat-square">
   <img alt="License" src="https://img.shields.io/badge/license-MIT%20%2F%20Apache--2.0-0f7b6c?style=flat-square">
 </p>
 
@@ -50,6 +50,7 @@ mdcraft brings together two projects:
 | **Output** | Print / PDF (pages, slides one per page, notes), a self-contained web page with rendered diagrams, *Copy as formatted text* for Word and e-mail, plain text |
 | **Safety** | Unsaved documents are kept for recovery after a crash; closing asks to save; files are written atomically |
 | **For scripts** | `mdcraft-cli new / templates / render / export / serve` |
+| **For AI agents** | an MCP server (`mdcraft-cli mcp`) for Claude Code, Gemini CLI and other agents: headless documents, or driving the open window with `--connect` — see [docs/mcp.md](docs/mcp.md) |
 
 Every action is a command with an id (`format.bold`, `insert.chart`, `slides.present` …): the ribbon,
 the keyboard, and command search (**Alt+Q**) all run the same commands.
@@ -71,6 +72,16 @@ mdcraft-cli new report Q3-report.md         # a document from a template
 mdcraft-cli export Q3-report.md             # → Q3-report.html
 mdcraft-cli serve Q3-report.md              # the full editor in your browser
 ```
+
+For AI agents (MCP):
+
+```sh
+claude mcp add mdcraft -- mdcraft-cli mcp --root ~/Documents            # headless documents and decks
+mdcraft --control &                                                      # or let agents drive the window
+claude mcp add mdcraft-app -- mdcraft-cli mcp --connect --root ~/Documents
+```
+
+Gemini CLI and other clients: [docs/mcp.md](docs/mcp.md).
 
 ## Templates
 
@@ -107,8 +118,8 @@ themes) is in **[docs/templates.md](docs/templates.md)**.
 |---|---|
 | `crates/mdcraft-core` | MarkDown Live's renderer and preview server, plus the editor API, preferences, recent files, document recovery; embeds the web UI (`web/`) |
 | `crates/mdcraft-templates` | the document and slide templates (`templates/*.md`) |
-| `apps/mdcraft` | the desktop app: tao + wry (WebKitGTK / WebView2 / WKWebView), native dialogs (rfd), menu on macOS (muda) |
-| `apps/mdcraft-cli` | the command-line tool |
+| `apps/mdcraft` | the desktop app: tao + wry (WebKitGTK / WKWebView), native dialogs (rfd), menu on macOS (muda) |
+| `apps/mdcraft-cli` | the command-line tool and the MCP server (`mcp.rs`, `live.rs`) |
 
 The web UI lives in `crates/mdcraft-core/web/assets` (plain JavaScript and CSS, no build step) and is
 compiled into the binaries. The bundled editor is rebuilt with `tools/editor-bundle` (`npm install && npm run build`).
@@ -117,13 +128,12 @@ compiled into the binaries. The bundled editor is rebuilt with `tools/editor-bun
 
 - Linux: `packaging/linux/package.sh` (tarball; `.deb`/`.rpm` with nfpm); desktop entry and AppStream metadata included.
 - macOS: `packaging/macos/package.sh` (universal `.app` and `.dmg`).
-- Windows: `packaging/windows/package.ps1` (portable zip; uses Edge WebView2).
-- CI: `.github/workflows/ci.yml` builds, lints and tests on all three.
+- CI: `.github/workflows/ci.yml` builds, lints and tests on macOS and Linux.
 
 ## Settings and files
 
-Preferences, recent documents and recovery copies live in `~/.config/mdcraft` (Linux),
-`~/Library/Application Support/mdcraft` (macOS) or `%APPDATA%\mdcraft` (Windows); `MDCRAFT_CONFIG_DIR`
+Preferences, recent documents and recovery copies live in `~/.config/mdcraft` (Linux)
+or `~/Library/Application Support/mdcraft` (macOS); `MDCRAFT_CONFIG_DIR`
 overrides it. Renderer settings use MarkDown Live's keys (`math`, `mermaidTheme`, `enableScriptExecution`,
 `plantumlJar` …) and are set in **File › Options**.
 

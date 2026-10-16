@@ -66,7 +66,7 @@ pub fn find_java(s: &Settings) -> Option<PathBuf> {
         return Some(PathBuf::from(&s.java));
     }
     if let Some(h) = std::env::var_os("JAVA_HOME") {
-        let p = PathBuf::from(h).join("bin").join(if cfg!(windows) { "java.exe" } else { "java" });
+        let p = PathBuf::from(h).join("bin").join("java");
         if p.is_file() {
             return Some(p);
         }
@@ -210,7 +210,7 @@ pub fn interpreter(s: &Settings, lang: &str, cmd_attr: &str, roots: &[PathBuf], 
         }
         for base in std::iter::once(dir.to_path_buf()).chain(roots.iter().cloned()) {
             for v in [".venv", "venv"] {
-                let p = base.join(v).join(if cfg!(windows) { "Scripts/python.exe" } else { "bin/python" });
+                let p = base.join(v).join("bin/python");
                 if p.is_file() {
                     return p.to_string_lossy().to_string();
                 }

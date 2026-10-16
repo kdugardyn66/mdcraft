@@ -8,7 +8,7 @@ document and slide themes (`web/assets/themes.css`) and the template thumbnails 
 
 | Asset | Author | Source | Licence |
 |---|---|---|---|
-| `assets/app-icon/mdcraft.svg` (and the PNG/ICO/ICNS/hicolor renderings, `web/assets/icon.svg`) | mdcraft contributors | original artwork | MIT OR Apache-2.0 |
+| `assets/app-icon/mdcraft.svg` (and the PNG/ICNS/hicolor renderings, `web/assets/icon.svg`) | mdcraft contributors | original artwork | MIT OR Apache-2.0 |
 | `templates/**/*.md` | mdcraft contributors | original text written for mdcraft; names, companies and figures are fictional | MIT OR Apache-2.0 |
 | `docs/images/*.png` | mdcraft contributors | screenshots of mdcraft itself | MIT OR Apache-2.0 |
 | `web/fonts/Inter-*.woff2` | Rasmus Andersson / The Inter Project Authors | https://github.com/rsms/inter (converted from WordCraft's TTF copies) | OFL-1.1 |

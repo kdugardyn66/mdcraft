@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.0 — 2026-10-16
+
+- MCP server for AI agents: `mdcraft-cli mcp` (stdio). Headless tools create, read, edit, inspect
+  and export documents; `--connect [PORT]` adds `app_*` tools that drive a running window: editor
+  text, cursor, and every command by id. `--root`, `--automation-read-root` and
+  `--automation-write-root` keep the agent inside the folders you choose. See `docs/mcp.md`.
+- Windows is no longer supported: macOS and Linux only. Removed the Windows packaging script,
+  the Windows CI runner, the `.ico` icon and the Windows-only code paths; building for Windows
+  now stops with a clear error.
+- `mdcraft --control [PORT]` and `mdcraft-cli serve --control` let agents drive the window
+  (loopback only, a token in a private control file; off by default).
+
 ## 0.1.0 — 2026-10-14
 
 First version.
